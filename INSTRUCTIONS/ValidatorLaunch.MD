@@ -117,4 +117,97 @@ journalctl -a -f | grep -E "indexed block exents|GUARD"
 
 ## Launch Guard
 
+cd $home
 git clone https://bitbucket.org/decimalteam/dsc-guard.git
+
+cd $HOME/dsc-guard/cmd/gentx/
+cp .env_example .env
+
+## edit env file (put mnemonic of your validator wallet)
+DECIMAL_GATEWAY="https://mainnet-gate.decimalchain.com/api"
+MNEMONIC="YOUR MNEMONIC"
+
+## run guard, in first time it will download all need packages
+go run main.go  (copy transaction has, and put to guard .env file)
+
+##configure guard (in firs time)
+cd $HOME/dsc-guard/cmd/dsc-guard/
+cp .env_example .env
+
+##configure env file
+
+NODES_ENDPOINTS=tcp://localhost:26657,tcp://abcd:26657 
+MISSED_BLOCKS_LIMIT=8
+MISSED_BLOCKS_WINDOW=24
+FALLBACK_PAUSE=2
+NEW_BLOCK_TIMEOUT=10
+VALIDATOR_ADDRESS=
+HTTP_LISTENER=localhost:11111
+SET_OFFLINE_TX=0a5b0a590a232f646563696d616c2e76616c696461746f722e76312e4d73675365744f66666c696e6512320a30647876616c6f70657231787036617161643439746537767366676136737472386872646568323472396a30356d736363125d0a590a4f0a282f65746865726d696e742e63727970746f2e76312e657468736563703235366b312e5075624b657912230a2103448e6b3d50d6a39cab3babaa4aa2b0885f556fe05d7149885a05a0e7940a7e4f12040a020801180d12001a4122264e07b59dd0739a289587ae8b7bf4103dec6ddb7a87e5bf51f98e3e6415937f594bf66cbf5ab8b0284d0d1d5cf99810ff5ca01484237e7e491c43361b886200
+
+NODES_ENDPOINTS - comma-separated list of nodes in the DSC blockchain with open tendermint ports (26657)
+
+MISSED_BLOCKS_LIM IT and MISSED_BLOCKS_WINDOW - upon reaching how many missed blocks MISSED_BLOCKS_LIMIT in a window of size MISSED_BLOCKS_WINDOW, a set-offline transaction should be sent
+
+FALLBACK_PAUSE - time to reconnect to nodes in seconds
+
+NEW_BLOCK_TIMEOUT - time to wait for a new block in seconds
+
+VALIDATOR_ADDRESS - tendermint address of the validator, taken from priv_validator_key.json, field "address "
+
+SET_OFFLINE_TX - hex representation of the set-offline transaction, should be the result of running `gentx`
+
+HTTP_LISTENER - optional. If set as host:port, then JSON is issued at this address according to the status of the guard
+
+##Try to run guard
+cd $HOME/dsc-guard/cmd/dsc-guard/
+go run main.go
+
+You will see something like this
+
+I[2024-05-29|16:46:20.683] [http://localhost:26657] Retrieved set of validators for block 20864248 
+I[2024-05-29|16:46:20.683] [http://localhost:26657] validator not in set: 351475A89CD********9D8A3C8D4B3AF  #its about validator not set in blockchain yet, and its ok now
+I[2024-05-29|16:46:20.684] [http://localhost:26657] Check set_offline transaction ok 
+I[2024-05-29|16:46:25.781] [http://localhost:26657] Retrieved signatures for block 20864248 
+
+## install guard as service (dont forget change path to go and dsc guard)
+bash -c 'cat <<EOM >/lib/systemd/system/guard.service
+[Unit]
+Description=Decimal Guard daemon
+Documentation=https://help.decimalchain.com
+
+[Service]
+Type=idle
+User=root
+ExecStart=/usr/local/go/bin/go run /root/dsc-guard/cmd/dsc-guard/main.go
+Restart=always
+RestartSec=3s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=GUARD
+Environment=GOROOT=/usr/local/go
+Environment=GOPATH=/root/go
+WorkingDirectory=/root/dsc-guard/cmd/dsc-guard
+[Install]
+WantedBy=multi-user.target
+EOM'
+
+
+systemctl daemon-reload
+systemctl enable guard
+
+#restart the system, check that everething is fine
+reboot
+
+#after system up run dscd up about 2-10 min, and the will nened to sync
+journalctl -a -f | grep -E "indexed block exents|GUARD"
+
+# you will see somethink like this
+May 29 16:56:20 ValidatorName DSCD[314]: 4:56PM INF indexed block exents height=20864355 module=txindex server=node
+May 29 16:56:25 ValidatorName GUARD[618]: I[2024-05-29|16:56:25.387] [http://localhost:26657] Retrieved signatures for block 20864355
+May 29 16:56:25 ValidatorName GUARD[618]: D[2024-05-29|16:56:25.387] missed blocks in window = 0
+May 29 16:56:25 ValidatorName GUARD[618]: I[2024-05-29|16:56:25.389] [http://localhost:26657] Retrieved set of validators for block 20864356
+May 29 16:56:25 ValidatorName GUARD[618]: I[2024-05-29|16:56:25.389] [http://localhost:26657] validator not in set: 351475A8**********9D8A3C8D4B3AF
+May 29 16:56:25 ValidatorName GUARD[618]: I[2024-05-29|16:56:25.390] [http://localhost:26657] Check set_offline transaction ok
+
+# if you see this, the system ready to use
