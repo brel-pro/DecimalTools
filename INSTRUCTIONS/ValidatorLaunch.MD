@@ -1,4 +1,4 @@
-## Tying for Ubuntu 22.04
+## Verify for Ubuntu 22.04
 
 
 apt update && apt install build-essential -y
@@ -113,3 +113,8 @@ reboot
 
 ## log filters for new blocks and guard messages
 journalctl -a -f | grep -E "indexed block exents|GUARD"
+
+
+## Launch Guard
+
+git clone https://bitbucket.org/decimalteam/dsc-guard.git
