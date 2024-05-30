@@ -79,7 +79,28 @@ dscd start --trace
 bash -c 'cat <<EOM >/lib/systemd/system/decimal.service
 [Unit]
 Description=Decimal Node daemon
-	@@ -106,75 +114,76 @@ EOM'
+Documentation=https://help.decimalchain.com
+Requires=network-online.target
+After=network-online.target
+[Service]
+User=root
+Group=root
+WorkingDirectory=/root/.decimal/daemon/
+Type=simple
+Restart=always
+RestartSec=3
+ExecStart=/root/go/bin/dscd start --trace
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=DSCD
+ExecReload=/bin/kill -HUP 
+ExecStop=/bin/kill 
+KillSignal=SIGTERM
+LimitNOFILE=1000000
+LimitNPROC=1000000
+[Install]
+WantedBy=multi-user.target
+EOM'
 
 systemctl daemon-reload
 systemctl enable decimal
@@ -154,7 +175,10 @@ cp .env_example .env
 NODES_ENDPOINTS=tcp://localhost:26657,tcp://abcd:26657 
 MISSED_BLOCKS_LIMIT=8
 MISSED_BLOCKS_WINDOW=24
-	@@ -185,34 +194,30 @@ HTTP_LISTENER=localhost:11111
+FALLBACK_PAUSE=2
+NEW_BLOCK_TIMEOUT=10
+VALIDATOR_ADDRESS=
+HTTP_LISTENER=localhost:11111
 SET_OFFLINE_TX=0a5b0a590a232...............6200
 ```
 
@@ -189,7 +213,20 @@ I[2024-05-29|16:46:25.781] [http://localhost:26657] Retrieved signatures for blo
 bash -c 'cat <<EOM >/lib/systemd/system/guard.service
 [Unit]
 Description=Decimal Guard daemon
-	@@ -234,25 +239,31 @@ WorkingDirectory=/root/dsc-guard/cmd/dsc-guard
+Documentation=https://help.decimalchain.com
+[Service]
+Type=idle
+User=root
+ExecStart=/usr/local/go/bin/go run /root/dsc-guard/cmd/dsc-guard/main.go
+Restart=always
+RestartSec=3s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=GUARD
+Environment=GOROOT=/usr/local/go
+Environment=GOPATH=/root/go
+WorkingDirectory=/root/dsc-guard/cmd/dsc-guard
+[Install]
 WantedBy=multi-user.target
 EOM'
 
