@@ -152,7 +152,7 @@ reboot
 
 ## Log filters for new blocks and guard messages
 ```sh
-journalctl -a -f | grep -E "indexed block events|GUARD"
+journalctl -a -f | grep -E "indexed block exents|GUARD"
 ```
 
 # Launch Guard
@@ -250,7 +250,7 @@ reboot
 
 ## After the system is up, run dscd up for about 2-10 minutes, and it will need to sync
 ```sh
-journalctl -a -f | grep -E "indexed block events|GUARD"
+journalctl -a -f | grep -E "indexed block exents|GUARD"
 ```
 
 ## You will see
